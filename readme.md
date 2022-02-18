@@ -59,3 +59,9 @@ def unpublished():
     return {"data": "Imagine an unpublished blogs list here"}
 ```
 It returns invalid URL as response. Because `blog_post` executes and `blog_id` has to be an integer. Hence, ordering matters! 
+
+### API Docs
+#### Swagger UI
+`http://localhost:8000/docs`
+#### ReDoc
+`http://localhost:8000/redoc`

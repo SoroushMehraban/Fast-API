@@ -8,6 +8,11 @@ def index():
     return {"message": "Hello World"}
 
 
-@app.get('/about')
-def about():
-    return {"data": "about page"}
+@app.get('/blog/unpublished')
+def unpublished():
+    return {"data": "Imagine an unpublished blogs list here"}
+
+
+@app.get('/blog/{blog_id}')
+def blog_post(blog_id: int):
+    return {"data": blog_id}

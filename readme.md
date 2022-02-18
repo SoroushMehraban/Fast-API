@@ -94,3 +94,24 @@ def index(param: Optional[str] = None):
    ...
 ```
 Note that `Optional` is only used by the editor to help us find errors in our code. FastAPI uses `str` part that we pass.
+
+### Request Body (POST request)
+```
+from pydantic import BaseModel
+
+class Blog(BaseModel):
+    title: str
+    content: str
+    published: Optional[bool]
+    
+@app.post('/blog')
+def create_blog(blog: Blog):
+    return {
+        'message': "Blog is created",
+        'data': {
+            'title': blog.title,
+            'content': blog.content,
+            'published': blog.published
+        }
+    }
+```

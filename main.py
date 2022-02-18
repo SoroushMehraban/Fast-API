@@ -1,11 +1,15 @@
 from fastapi import FastAPI
+from typing import Optional
 
 app = FastAPI()
 
 
-@app.get('/')
-def index():
-    return {"message": "Hello World"}
+@app.get('/blog')
+def index(limit: int = 10, published: bool = True, sort: Optional[str] = None):
+    if published:
+        return {"data": f"{limit} published blogs from db"}
+    else:
+        return {"data": f"{limit} blogs from db"}
 
 
 @app.get('/blog/unpublished')

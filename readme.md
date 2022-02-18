@@ -115,3 +115,45 @@ def create_blog(blog: Blog):
         }
     }
 ```
+
+## Add database and ORM
+First install sqlalchemy:  
+`pip install sqlalchemy`  
+Then open a `database.py` file with the following content:
+```
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
+SQLALCHEMY_DATABASE_URL = "sqlite:///./blog.db"
+
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+
+SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+
+Base = declarative_base()
+```
+Then create a `models.py` and a model like the following content:
+```
+from sqlalchemy import Column, Integer, String
+from .database import Base
+
+
+class Blog(Base):
+    __tablename__ = 'blogs'
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String)
+    body = Column(String)
+```
+Finally, create all tables (if not exists) in the `main.py`:
+```
+from fastapi import FastAPI
+from . import schemas, models
+from .database import engine
+
+app = FastAPI()
+
+models.Base.metadata.create_all(bind=engine)
+...
+```

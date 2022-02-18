@@ -23,3 +23,15 @@ def create(request: schemas.Blog, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_blog)
     return new_blog
+
+
+@app.get('/blog')
+def all_blogs(db: Session = Depends(get_db)):
+    blogs = db.query(models.Blog).all()
+    return blogs
+
+
+@app.get('/blog/{id}')
+def get_blog(blog_id, db: Session = Depends(get_db)):
+    blog = db.query(models.Blog).get(blog_id)
+    return blog

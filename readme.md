@@ -274,3 +274,9 @@ def all_blogs(db: Session = Depends(get_db)):
 ```
 
 
+### Hashing password
+1. `pip install passlib`
+2. `pip install bcrypt`
+3. `from passlib.context import CryptContext`
+4. `pwd_cxt = CryptContext(schemes=['bcrypt'], deprecated="auto")`
+5. `hashed_password = pwd_cxt.hash(request.password)`

@@ -86,6 +86,7 @@ def index(limit: int = 10, published: bool = True):
 
 If default value is not set, then FastAPI assumes that the query parameter is required. In case if it is not required
 and is optional, we use `Optional` from `typing`:
+
 ```
 from typing import Optional
 
@@ -93,9 +94,12 @@ from typing import Optional
 def index(param: Optional[str] = None):
    ...
 ```
-Note that `Optional` is only used by the editor to help us find errors in our code. FastAPI uses `str` part that we pass.
+
+Note that `Optional` is only used by the editor to help us find errors in our code. FastAPI uses `str` part that we
+pass.
 
 ### Request Body (POST request)
+
 ```
 from pydantic import BaseModel
 
@@ -117,10 +121,12 @@ def create_blog(blog: Blog):
 ```
 
 ### Add database and ORM
+
 First install sqlalchemy:  
 `pip install sqlalchemy`
 
 Then open a `database.py` file with the following content:
+
 ```
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -134,7 +140,9 @@ SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
 Base = declarative_base()
 ```
+
 Then create a `models.py` and a model like the following content:
+
 ```
 from sqlalchemy import Column, Integer, String
 from .database import Base
@@ -147,7 +155,9 @@ class Blog(Base):
     title = Column(String)
     body = Column(String)
 ```
+
 Finally, create all tables (if not exists) in the `main.py`:
+
 ```
 from fastapi import FastAPI
 from . import schemas, models
@@ -160,6 +170,7 @@ models.Base.metadata.create_all(bind=engine)
 ```
 
 ### Store given data on database
+
 ```
 from fastapi import FastAPI, Depends
 from . import schemas, models
@@ -187,7 +198,9 @@ def create(request: schemas.Blog, db: Session = Depends(get_db)):
     db.refresh(new_blog)
     return new_blog
 ```
+
 # Get data from database
+
 ```
 @app.get('/blog')
 def all_blogs(db: Session = Depends(get_db)):
@@ -202,11 +215,32 @@ def get_blog(blog_id, db: Session = Depends(get_db)):
 ```
 
 # Delete data from database
+
 ```
 @app.delete('/blog/{blog_id}', status_code=status.HTTP_204_NO_CONTENT)
 def destroy(blog_id, db: Session = Depends(get_db)):
-    db.query(models.Blog).filter(models.Blog.id == blog_id).delete(synchronize_session=False)
+    blog = db.query(models.Blog).filter(models.Blog.id == blog_id)
+    if blog.first() is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Blog with id {blog_id} not found")
+    blog.delete(synchronize_session=False)
     db.commit()
 
     return {"message": "done"}
+```
+
+# Update data
+
+Note that `.update()` method provided by SQLAlchemy is a **bulk operation**. In other words, if we filter, and it returns
+two rows of a table with the corresponding query, it updates both of them.
+
+```
+@app.put('/blog/{blog_id}', status_code=status.HTTP_202_ACCEPTED)
+def update(blog_id, request: schemas.Blog, db: Session = Depends(get_db)):
+    blog = db.query(models.Blog).filter(models.Blog.id == blog_id)
+    if blog.first() is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Blog with id {blog_id} not found")
+
+    blog.update(request.dict())
+    db.commit()
+    return {"message": "Updated successfully"}
 ```

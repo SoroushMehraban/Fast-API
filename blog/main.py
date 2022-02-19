@@ -20,8 +20,8 @@ def get_db():
 
 
 @app.post('/blog', status_code=status.HTTP_201_CREATED, tags=['blogs'])
-def create(request: schemas.Blog, db: Session = Depends(get_db)):
-    new_blog = models.Blog(title=request.title, body=request.body)
+def create(request: schemas.BlogBase, db: Session = Depends(get_db)):
+    new_blog = models.Blog(title=request.title, body=request.body, user_id=1)
     db.add(new_blog)
     db.commit()
     db.refresh(new_blog)
@@ -40,7 +40,7 @@ def destroy(blog_id, db: Session = Depends(get_db)):
 
 
 @app.put('/blog/{blog_id}', status_code=status.HTTP_202_ACCEPTED, tags=['blogs'])
-def update(blog_id, request: schemas.Blog, db: Session = Depends(get_db)):
+def update(blog_id, request: schemas.BlogBase, db: Session = Depends(get_db)):
     blog = db.query(models.Blog).filter(models.Blog.id == blog_id)
     if blog.first() is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Blog with id {blog_id} not found")
@@ -75,7 +75,7 @@ def create_user(request: schemas.User, db: Session = Depends(get_db)):
     return new_user
 
 
-@app.post('/user/{user_id}', response_model=schemas.ShowUser, tags=['users'])
+@app.get('/user/{user_id}', response_model=schemas.ShowUser, tags=['users'])
 def get_user(user_id: int, db: Session = Depends(get_db)):
     user = db.query(models.User).get(user_id)
     if user is None:

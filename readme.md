@@ -200,3 +200,13 @@ def get_blog(blog_id, db: Session = Depends(get_db)):
     blog = db.query(models.Blog).get(blog_id)
     return blog
 ```
+
+# Delete data from database
+```
+@app.delete('/blog/{blog_id}', status_code=status.HTTP_204_NO_CONTENT)
+def destroy(blog_id, db: Session = Depends(get_db)):
+    db.query(models.Blog).filter(models.Blog.id == blog_id).delete(synchronize_session=False)
+    db.commit()
+
+    return {"message": "done"}
+```

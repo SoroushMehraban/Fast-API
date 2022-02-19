@@ -199,7 +199,7 @@ def create(request: schemas.Blog, db: Session = Depends(get_db)):
     return new_blog
 ```
 
-# Get data from database
+### Get data from database
 
 ```
 @app.get('/blog')
@@ -214,7 +214,7 @@ def get_blog(blog_id, db: Session = Depends(get_db)):
     return blog
 ```
 
-# Delete data from database
+### Delete data from database
 
 ```
 @app.delete('/blog/{blog_id}', status_code=status.HTTP_204_NO_CONTENT)
@@ -228,7 +228,7 @@ def destroy(blog_id, db: Session = Depends(get_db)):
     return {"message": "done"}
 ```
 
-# Update data
+### Update data
 
 Note that `.update()` method provided by SQLAlchemy is a **bulk operation**. In other words, if we filter, and it returns
 two rows of a table with the corresponding query, it updates both of them.
@@ -244,3 +244,33 @@ def update(blog_id, request: schemas.Blog, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Updated successfully"}
 ```
+
+### Response Model
+In cases when we don't want to respond with all the data of a model, we use response model. To do that, add the following model on `schemas.py`:
+```
+class ShowBlog(BaseModel):
+    title: str
+    body: str
+
+    class Config:
+        orm_mode = True
+```
+In the preceding code, we are saying that we only want to have title and body in the response.
+
+To use it on a path, we have to add `response_model=` on the decorator:
+```
+@app.get('/blog/{id}', status_code=status.HTTP_200_OK, response_model=schemas.ShowBlog)
+def get_blog(blog_id, response: Response, db: Session = Depends(get_db)):
+  ...
+```
+
+In cases when we have multiple instance in the response, we have to define response model like the following code:
+```
+from typing import List
+
+@app.get('/blog', response_model=List[schemas.ShowBlog])
+def all_blogs(db: Session = Depends(get_db)):
+   ...
+```
+
+

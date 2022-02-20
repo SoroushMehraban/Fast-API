@@ -280,3 +280,44 @@ def all_blogs(db: Session = Depends(get_db)):
 3. `from passlib.context import CryptContext`
 4. `pwd_cxt = CryptContext(schemes=['bcrypt'], deprecated="auto")`
 5. `hashed_password = pwd_cxt.hash(request.password)`
+
+
+### JWT Access Token
+1. `pip install python-jose`
+2. Create a file for JWToken, namely `token.py`, with the following content:
+```
+SECRET_KEY = "<SECRET_KEY_HERE>"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+```
+For the `SECRET_KEY`, you can create it with the following command on the terminal:
+`openssl rand -hex 32`
+3. Add these two pydantic models on `schemas.py`:
+```
+from typing import Optional
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    username: Optional[str] = None
+```
+4. Add the following function to the `token.py`:
+```
+from datetime import datetime, timedelta
+from jose import jwt
+
+def create_access_token(data: dict,):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+```
+5. Use the preceding function where you get the user data:
+```
+access_token = token.create_access_token(data={"sub": user.email})
+return {"access_token": access_token, "token_type": "bearer"}
+```

@@ -4,10 +4,13 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..hashing import Hash
 
-router = APIRouter()
+router = APIRouter(
+    prefix='/user',
+    tags=['Users']
+)
 
 
-@router.post("/user", response_model=schemas.ShowUser, tags=['users'])
+@router.post("/", response_model=schemas.ShowUser)
 def create_user(request: schemas.User, db: Session = Depends(get_db)):
     new_user = models.User(name=request.name, email=request.email, password=Hash.bcrypt(request.password))
     db.add(new_user)
@@ -16,7 +19,7 @@ def create_user(request: schemas.User, db: Session = Depends(get_db)):
     return new_user
 
 
-@router.get('/user/{user_id}', response_model=schemas.ShowUser, tags=['users'])
+@router.get('/{user_id}', response_model=schemas.ShowUser)
 def get_user(user_id: int, db: Session = Depends(get_db)):
     user = db.query(models.User).get(user_id)
     if user is None:

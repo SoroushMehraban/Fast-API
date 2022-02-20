@@ -230,8 +230,8 @@ def destroy(blog_id, db: Session = Depends(get_db)):
 
 ### Update data
 
-Note that `.update()` method provided by SQLAlchemy is a **bulk operation**. In other words, if we filter, and it returns
-two rows of a table with the corresponding query, it updates both of them.
+Note that `.update()` method provided by SQLAlchemy is a **bulk operation**. In other words, if we filter, and it
+returns two rows of a table with the corresponding query, it updates both of them.
 
 ```
 @app.put('/blog/{blog_id}', status_code=status.HTTP_202_ACCEPTED)
@@ -246,7 +246,10 @@ def update(blog_id, request: schemas.Blog, db: Session = Depends(get_db)):
 ```
 
 ### Response Model
-In cases when we don't want to respond with all the data of a model, we use response model. To do that, add the following model on `schemas.py`:
+
+In cases when we don't want to respond with all the data of a model, we use response model. To do that, add the
+following model on `schemas.py`:
+
 ```
 class ShowBlog(BaseModel):
     title: str
@@ -255,9 +258,11 @@ class ShowBlog(BaseModel):
     class Config:
         orm_mode = True
 ```
+
 In the preceding code, we are saying that we only want to have title and body in the response.
 
 To use it on a path, we have to add `response_model=` on the decorator:
+
 ```
 @app.get('/blog/{id}', status_code=status.HTTP_200_OK, response_model=schemas.ShowBlog)
 def get_blog(blog_id, response: Response, db: Session = Depends(get_db)):
@@ -265,6 +270,7 @@ def get_blog(blog_id, response: Response, db: Session = Depends(get_db)):
 ```
 
 In cases when we have multiple instance in the response, we have to define response model like the following code:
+
 ```
 from typing import List
 
@@ -273,26 +279,30 @@ def all_blogs(db: Session = Depends(get_db)):
    ...
 ```
 
-
 ### Hashing password
+
 1. `pip install passlib`
 2. `pip install bcrypt`
 3. `from passlib.context import CryptContext`
 4. `pwd_cxt = CryptContext(schemes=['bcrypt'], deprecated="auto")`
 5. `hashed_password = pwd_cxt.hash(request.password)`
 
-
 ### JWT Access Token
+
 1. `pip install python-jose`
 2. Create a file for JWToken, namely `token.py`, with the following content:
+
 ```
 SECRET_KEY = "<SECRET_KEY_HERE>"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 ```
-For the `SECRET_KEY`, you can create it with the following command on the terminal:
+
+For the `SECRET_KEY`, you can create it with the following command on the terminal:  
 `openssl rand -hex 32`
+
 3. Add these two pydantic models on `schemas.py`:
+
 ```
 from typing import Optional
 
@@ -304,7 +314,9 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     username: Optional[str] = None
 ```
+
 4. Add the following function to the `token.py`:
+
 ```
 from datetime import datetime, timedelta
 from jose import jwt
@@ -316,8 +328,73 @@ def create_access_token(data: dict,):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 ```
+
 5. Use the preceding function where you get the user data:
+
 ```
 access_token = token.create_access_token(data={"sub": user.email})
 return {"access_token": access_token, "token_type": "bearer"}
+```
+
+### Route behind authentication
+
+1. create a `ouath2.py` with the following content:
+
+```
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from . import token, database, models
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+
+def get_user(email):
+    db = next(database.get_db())
+    return db.query(models.User).filter(models.User.email == email).first()
+
+
+def get_current_user(data: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    token_data = token.verify_token(data, credentials_exception)
+    user = get_user(token_data.email)
+    return user
+
+```
+
+Note that `"login"` is the name of the route that is responsible for logging in. It should have the following format:
+
+```
+@router.post('/login')
+def login(request: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
+    user = db.query(models.User).filter(models.User.email == request.username).first()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid Credentials")
+    if not Hash.verify(user.password, request.password):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incorrect password")
+
+    access_token = token.create_access_token(data={"sub": user.email})
+
+    return {"access_token": access_token, "token_type": "bearer"}
+```
+
+It is important to set request type to `OAuth2PasswordRequestForm`.
+
+2. As you can see, `.verify_token` on `get_current_user` is needed to be implemented. Hence, add the following function
+   in `token.py`:
+
+```
+def verify_token(token: str, credentials_exception):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+        token_data = schemas.TokenData(email=email)
+    except JWTError:
+        raise credentials_exception
 ```

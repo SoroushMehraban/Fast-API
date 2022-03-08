@@ -17,7 +17,7 @@ It's a web server that runs our API.
 
 After creating the main file, namely `main.py`, the easiest thing to write is:
 
-```
+```python
 from fastapi import FastAPI
 
 app = FastAPI()
@@ -37,7 +37,7 @@ addition, `--reload` is for automatically reloading after a change in our code.
 
 ### Dynamic routing
 
-```
+```python
 @app.get('/blog/{blog_id}')
 def blog_post(blog_id: int):
     return {"data": blog_id}
@@ -49,7 +49,7 @@ handling on our side:
 
 ### Function ordering matters
 
-```
+```python
 @app.get('/blog/{blog_id}')
 def blog_post(blog_id: int):
     return {"data": blog_id}
@@ -75,7 +75,7 @@ matters!
 
 ### Query Parameters
 
-```
+```python
 @app.get('/blog')
 def index(limit: int = 10, published: bool = True):
     if published:
@@ -87,7 +87,7 @@ def index(limit: int = 10, published: bool = True):
 If default value is not set, then FastAPI assumes that the query parameter is required. In case if it is not required
 and is optional, we use `Optional` from `typing`:
 
-```
+```python
 from typing import Optional
 
 @app.get('/endpoint')
@@ -100,7 +100,7 @@ pass.
 
 ### Request Body (POST request)
 
-```
+```python
 from pydantic import BaseModel
 
 class Blog(BaseModel):
@@ -127,7 +127,7 @@ First install sqlalchemy:
 
 Then open a `database.py` file with the following content:
 
-```
+```python
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -143,7 +143,7 @@ Base = declarative_base()
 
 Then create a `models.py` and a model like the following content:
 
-```
+```python
 from sqlalchemy import Column, Integer, String
 from .database import Base
 
@@ -158,7 +158,7 @@ class Blog(Base):
 
 Finally, create all tables (if not exists) in the `main.py`:
 
-```
+```python
 from fastapi import FastAPI
 from . import schemas, models
 from .database import engine
@@ -171,7 +171,7 @@ models.Base.metadata.create_all(bind=engine)
 
 ### Store given data on database
 
-```
+```python
 from fastapi import FastAPI, Depends
 from . import schemas, models
 from .database import engine, SessionLocal
@@ -201,7 +201,7 @@ def create(request: schemas.Blog, db: Session = Depends(get_db)):
 
 ### Get data from database
 
-```
+```python
 @app.get('/blog')
 def all_blogs(db: Session = Depends(get_db)):
     blogs = db.query(models.Blog).all()
@@ -216,7 +216,7 @@ def get_blog(blog_id, db: Session = Depends(get_db)):
 
 ### Delete data from database
 
-```
+```python
 @app.delete('/blog/{blog_id}', status_code=status.HTTP_204_NO_CONTENT)
 def destroy(blog_id, db: Session = Depends(get_db)):
     blog = db.query(models.Blog).filter(models.Blog.id == blog_id)
@@ -233,7 +233,7 @@ def destroy(blog_id, db: Session = Depends(get_db)):
 Note that `.update()` method provided by SQLAlchemy is a **bulk operation**. In other words, if we filter, and it
 returns two rows of a table with the corresponding query, it updates both of them.
 
-```
+```python
 @app.put('/blog/{blog_id}', status_code=status.HTTP_202_ACCEPTED)
 def update(blog_id, request: schemas.Blog, db: Session = Depends(get_db)):
     blog = db.query(models.Blog).filter(models.Blog.id == blog_id)
@@ -250,7 +250,7 @@ def update(blog_id, request: schemas.Blog, db: Session = Depends(get_db)):
 In cases when we don't want to respond with all the data of a model, we use response model. To do that, add the
 following model on `schemas.py`:
 
-```
+```python
 class ShowBlog(BaseModel):
     title: str
     body: str
@@ -263,7 +263,7 @@ In the preceding code, we are saying that we only want to have title and body in
 
 To use it on a path, we have to add `response_model=` on the decorator:
 
-```
+```python
 @app.get('/blog/{id}', status_code=status.HTTP_200_OK, response_model=schemas.ShowBlog)
 def get_blog(blog_id, response: Response, db: Session = Depends(get_db)):
   ...
@@ -271,7 +271,7 @@ def get_blog(blog_id, response: Response, db: Session = Depends(get_db)):
 
 In cases when we have multiple instance in the response, we have to define response model like the following code:
 
-```
+```python
 from typing import List
 
 @app.get('/blog', response_model=List[schemas.ShowBlog])
@@ -292,7 +292,7 @@ def all_blogs(db: Session = Depends(get_db)):
 1. `pip install python-jose`
 2. Create a file for JWToken, namely `token.py`, with the following content:
 
-```
+```python
 SECRET_KEY = "<SECRET_KEY_HERE>"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
@@ -303,7 +303,7 @@ For the `SECRET_KEY`, you can create it with the following command on the termin
 
 3. Add these two pydantic models on `schemas.py`:
 
-```
+```python
 from typing import Optional
 
 class Token(BaseModel):
@@ -317,7 +317,7 @@ class TokenData(BaseModel):
 
 4. Add the following function to the `token.py`:
 
-```
+```python
 from datetime import datetime, timedelta
 from jose import jwt
 
@@ -331,7 +331,7 @@ def create_access_token(data: dict,):
 
 5. Use the preceding function where you get the user data:
 
-```
+```python
 access_token = token.create_access_token(data={"sub": user.email})
 return {"access_token": access_token, "token_type": "bearer"}
 ```
@@ -340,7 +340,7 @@ return {"access_token": access_token, "token_type": "bearer"}
 
 1. create a `ouath2.py` with the following content:
 
-```
+```python
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from . import token, database, models
@@ -368,7 +368,7 @@ def get_current_user(data: str = Depends(oauth2_scheme)):
 
 Note that `"login"` is the name of the route that is responsible for logging in. It should have the following format:
 
-```
+```python
 @router.post('/login')
 def login(request: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
     user = db.query(models.User).filter(models.User.email == request.username).first()
@@ -387,7 +387,7 @@ It is important to set request type to `OAuth2PasswordRequestForm`.
 2. As you can see, `.verify_token` on `get_current_user` is needed to be implemented. Hence, add the following function
    in `token.py`:
 
-```
+```python
 def verify_token(token: str, credentials_exception):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -398,3 +398,45 @@ def verify_token(token: str, credentials_exception):
     except JWTError:
         raise credentials_exception
 ```
+
+### Alembic
+This is based on [this video](https://www.youtube.com/watch?v=SdcH6IEi6nE&t) on YouTube.
+
+#### Installation:
+```text
+pip install alembic
+```
+
+#### Initialization
+```text
+alembic init alembic
+```
+
+#### Setup
+1. Go to `alembic.ini` and change `sqlalchemy.url` with yours.
+2. Go to `alembic/env.py` and change `target_metadata` with `Base.metadata`.
+   Note that `Base` should be imported from `models.py` that has the tables not the `database.py`
+
+#### Revision
+```text
+alembic revision --autogenerate -m "<REVISION MESSAGE>"
+```
+
+#### Upgrade
+Every version has a format like `b1c089bc3896_first_revision.py`. We can upgrade to a specific version using the
+following command:
+```text
+alembic upgrade b1c0
+```
+And it automatically detects which version we want. Since it is the only version started with `b1c0`.
+
+Another approach is to upgrade to the last version:
+```text
+alembic upgrade head
+```
+
+#### Downgrade
+```text
+alembic downgrade <REVISION_NAME>
+```
+
